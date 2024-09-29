@@ -1,0 +1,23 @@
+.favourite {
+    background-color: #fff8c6;
+    /* Κιτρινωπό χρώμα για τα αποθηκευμένα favourites */
+}
+
+.tabs {
+    margin-top: 20px;
+    display: flex;
+}
+
+.tabs button {
+    padding: 10px;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}

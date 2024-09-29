@@ -1,7 +1,6 @@
 <?php
-header("Access-Control-Allow-Origin: http://localhost:8000");  // Επέτρεψε αιτήματα από το front-end
-header("Access-Control-Allow-Methods: POST, GET, OPTIONS");    // Επέτρεψε τα POST και GET αιτήματα
-header("Access-Control-Allow-Headers: Content-Type");          // Επέτρεψε headers όπως το Content-Type
+// Συμπεριλαμβάνουμε τα headers από το headers.php
+include 'headers.php';
 
 // Σύνδεση με τη MySQL βάση δεδομένων
 $host = '127.0.0.1';
