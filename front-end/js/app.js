@@ -5,37 +5,40 @@ $('.tabs button').on('click', function () {
     $('#' + tabId).addClass('active');
 });
 
-let favouritesUrls = [];  // Θα αποθηκεύσουμε εδώ τα URLs των αποθηκευμένων favourites
-
-// Φόρτωση των αποθηκευμένων favourites κατά την αρχική φόρτωση
-function loadFavourites() {
-    $.ajax({
-        url: 'http://localhost:8001/get_favourites.php',
-        method: 'GET',
-        success: function (favourites) {
-            let output = '';
-
-            if (favourites.length === 0) {
-                output = '<p>No favourites found. Save your favourite repositories by clicking the star!</p>';
-            } else {
-                favourites.forEach(function (fav) {
-                    output += `<li>
-                        <strong>Owner:</strong> ${fav.owner.login} <br>
-                        <strong>Repository:</strong> ${fav.name} <br>
-                        <strong>URL:</strong> <a href="${fav.html_url}" target="_blank">${fav.html_url}</a> <br>
-                    </li><hr>`;
-                });
-            }
-
-            $('#favourites-list').html(output);
-        },
-        error: function () {
-            console.error('Failed to load favourites.');
-        }
-    });
-}
+// Δηλώνουμε το favouritesUrls έξω από όλες τις συναρτήσεις για να είναι διαθέσιμο παντού
+let favouritesUrls = [];
 
 $(document).ready(function () {
+    // Φόρτωση των αποθηκευμένων favourites κατά την αρχική φόρτωση
+    function loadFavourites() {
+        $.ajax({
+            url: 'http://localhost:8001/get_favourites.php',
+            method: 'GET',
+            success: function (favourites) {
+                let output = '';
+
+                if (favourites.length === 0) {
+                    output = '<p>No favourites found. Save your favourite repositories by clicking the star!</p>';
+                } else {
+                    favourites.forEach(function (fav) {
+                        output += `<li>
+                            <strong>Owner:</strong> ${fav.owner.login} <br>
+                            <strong>Repository:</strong> ${fav.name} <br>
+                            <strong>URL:</strong> <a href="${fav.html_url}" target="_blank">${fav.html_url}</a> <br>
+                        </li><hr>`;
+                        // Γέμισμα του πίνακα με τα αποθηκευμένα favourites URLs
+                        favouritesUrls.push(fav.html_url);
+                    });
+                }
+
+                $('#favourites-list').html(output);
+            },
+            error: function () {
+                console.error('Failed to load favourites.');
+            }
+        });
+    }
+
     loadFavourites();  // Φόρτωση των favourites κατά την αρχική φόρτωση
 
     // Αναζήτηση GitHub repositories
@@ -50,6 +53,7 @@ $(document).ready(function () {
             return;
         }
 
+        // Ενημέρωση των favourites URLs κατά την αναζήτηση
         $.ajax({
             url: 'http://localhost:8001/fetch_repos.php',  // Το back-end script που καλεί το API
             method: 'POST',
@@ -57,22 +61,32 @@ $(document).ready(function () {
             success: function (response) {
                 let output = '<ul>';
 
-                response.forEach(repo => {
-                    // Έλεγχος αν το repo υπάρχει στη λίστα των favourites
-                    const isFavourite = favouritesUrls.includes(repo.html_url);
+                // Φόρτωση των αποθηκευμένων favourites για να ελέγξουμε ποια repos είναι favourites
+                $.ajax({
+                    url: 'http://localhost:8001/get_favourites.php',
+                    method: 'GET',
+                    success: function (favourites) {
+                        favouritesUrls = [];  // Αδειάζουμε τον πίνακα
+                        favourites.forEach(function (fav) {
+                            favouritesUrls.push(fav.html_url);
+                        });
 
-                    // Αν το repo είναι favourite, προσθέτουμε την κλάση 'favourite'
-                    output += `<li class="${isFavourite ? 'favourite' : ''}">
-                        <strong>Name:</strong> ${repo.name} <br>
-                        <strong>Owner:</strong> ${repo.owner.login} <br>  <!-- Διόρθωση εδώ -->
-                        <strong>Description:</strong> ${repo.description || 'No description'} <br>
-                        <strong>URL:</strong> <a href="${repo.html_url}" target="_blank">${repo.html_url}</a> <br>
-                        <button class="star" data-url="${repo.html_url}">★ Save to favourites</button>
-                    </li><hr>`;
+                        response.forEach(repo => {
+                            const isFavourite = favouritesUrls.includes(repo.html_url);
+
+                            output += `<li class="${isFavourite ? 'favourite' : ''}">
+                                <strong>Name:</strong> ${repo.name} <br>
+                                <strong>Owner:</strong> ${repo.owner.login} <br>
+                                <strong>Description:</strong> ${repo.description || 'No description'} <br>
+                                <strong>URL:</strong> <a href="${repo.html_url}" target="_blank">${repo.html_url}</a> <br>
+                                <button class="star" data-url="${repo.html_url}">★ Save to favourites</button>
+                            </li><hr>`;
+                        });
+
+                        output += '</ul>';
+                        $('#repos-list').html(output);
+                    }
                 });
-
-                output += '</ul>';
-                $('#repos-list').html(output);
             },
         });
     });
@@ -80,7 +94,7 @@ $(document).ready(function () {
     // AJAX call για την αποθήκευση των favourites
     $(document).on('click', '.star', function () {
         const repoUrl = $(this).data('url');
-        const listItem = $(this).closest('li');  // Βρίσκουμε το στοιχείο "li" που περιέχει το repo
+        const listItem = $(this).closest('li');
 
         $.ajax({
             url: 'http://localhost:8001/save_favourite.php',
@@ -90,11 +104,11 @@ $(document).ready(function () {
                 if (response === 'success') {
                     alert('Saved to favourites');
                     listItem.addClass('favourite');
-                    favouritesUrls.push(repoUrl);  // Προσθήκη του νέου favourite στη λίστα
+                    favouritesUrls.push(repoUrl);
                 } else if (response === 'deleted') {
                     alert('Removed from favourites');
                     listItem.removeClass('favourite');
-                    favouritesUrls = favouritesUrls.filter(url => url !== repoUrl);  // Αφαίρεση του favourite από τη λίστα
+                    favouritesUrls = favouritesUrls.filter(url => url !== repoUrl);
                 }
                 loadFavourites();  // Ενημέρωση των favourites
             },
